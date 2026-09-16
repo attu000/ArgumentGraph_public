@@ -1,0 +1,614 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>議論グラフ（最小形式） — ラグビー部 出店会議</title>
+<style>
+:root{
+  --ground:#dfe3e6; --panel:#f4f5f6; --panel2:#eaedef;
+  --ink:#16202b; --ink2:#4a5762; --ink3:#7b8892;
+  --rule:#b6bfc6; --rule2:#cfd6da;
+  --flag:#a32b1e; --flagBg:#f8e8e5;
+  --up:#0f6b62; --down:#a8681c; --policy:#6b3fa0;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ground);color:var(--ink);
+ font-family:"Hiragino Kaku Gothic ProN","Yu Gothic Medium","Yu Gothic",Meiryo,system-ui,sans-serif;
+ font-size:14px;line-height:1.6;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit;color:inherit}
+header{flex:0 0 auto;display:flex;align-items:baseline;gap:16px;padding:9px 16px;
+ background:var(--panel);border-bottom:1px solid var(--rule)}
+header h1{font-size:15px;font-weight:600;margin:0;letter-spacing:.04em}
+header .sub{font-size:12px;color:var(--ink3)}
+header .spacer{flex:1}
+.btn{background:var(--panel2);border:1px solid var(--rule);border-radius:2px;padding:4px 10px;font-size:12.5px;cursor:pointer}
+.btn:hover{background:#dfe4e7}
+select.f{max-width:190px}
+main{flex:1;display:flex;min-height:0}
+#stage{flex:1;position:relative;overflow:hidden;cursor:grab;background:var(--ground)}
+#stage.drag{cursor:grabbing}
+#svg{width:100%;height:100%;display:block;touch-action:none}
+aside{flex:0 0 340px;background:var(--panel);border-left:1px solid var(--rule);overflow-y:auto;padding:14px 16px 30px}
+footer{flex:0 0 216px;background:var(--panel);border-top:1px solid var(--rule);display:flex;overflow:hidden}
+.col{flex:1;min-width:0;border-right:1px solid var(--rule2);display:flex;flex-direction:column}
+.col:last-child{border-right:none}
+.col h3{margin:0;padding:8px 12px 4px;font-size:12px;font-weight:600;color:var(--ink2);display:flex;gap:7px;align-items:baseline}
+.col h3 .n{color:#fff;border-radius:9px;padding:0 6px;font-size:10.5px;line-height:16px;background:var(--ink3)}
+.col h3 .n.a{background:var(--flag)} .col h3 .n.b{background:var(--policy)} .col h3 .n.c{background:var(--down)}
+.col p{margin:0;padding:0 12px 5px;font-size:11px;color:var(--ink3);line-height:1.45}
+.col ul{margin:0;padding:0 12px 12px;list-style:none;overflow-y:auto;flex:1}
+.col li{background:#fff;border:1px solid var(--rule2);padding:5px 8px;margin-bottom:4px;font-size:11.5px;line-height:1.45;cursor:pointer}
+.col li:hover{border-color:var(--ink)}
+.col li b{font-weight:600;letter-spacing:.06em}
+.col li .why{color:var(--ink3);display:block;font-size:10.5px;margin-top:1px}
+h2{font-size:11.5px;font-weight:600;margin:0 0 7px;color:var(--ink2);letter-spacing:.06em}
+.sid{font-size:15px;font-weight:700;letter-spacing:.08em}
+.say{font-size:11.5px;color:var(--ink3);margin-left:8px}
+.txt{font-size:14px;line-height:1.75;margin:6px 0 14px}
+.blk{margin-bottom:13px}
+.chip{display:inline-block;border:1px solid var(--rule);background:#fff;border-radius:2px;padding:1px 7px;
+ margin:0 4px 4px 0;font-size:11.5px;cursor:pointer;letter-spacing:.05em}
+.chip:hover{border-color:var(--ink);background:var(--panel2)}
+.chip.src{background:var(--panel2);cursor:default;border-style:dashed}
+.grp{background:#fff;border:1px solid var(--rule2);padding:5px 8px;margin-bottom:4px}
+.grp .lbl{font-size:10.5px;color:var(--ink3);display:block;margin-bottom:2px}
+.reb{background:var(--flagBg);border:1px solid #e0c4be;padding:6px 9px;margin-bottom:4px;font-size:12px;line-height:1.5}
+.empty{color:var(--ink3);font-size:12px}
+.warn{color:var(--flag);font-size:12px}
+#hint{position:absolute;left:0;right:0;top:10px;text-align:center;font-size:11.5px;color:var(--ink3);pointer-events:none;transition:opacity .35s}
+#legend{position:absolute;left:12px;bottom:12px;background:rgba(244,245,246,.94);border:1px solid var(--rule);
+ padding:7px 10px;font-size:11px;line-height:1.75;color:var(--ink2);pointer-events:none}
+#legend .sw{display:inline-block;width:11px;height:11px;border:1.5px solid;vertical-align:-1px;margin-right:6px}
+.node{cursor:pointer}
+.node rect.body,.node rect.pill{stroke-width:1.3}
+.node text{pointer-events:none}
+.nid{font-size:9.5px;font-weight:700;letter-spacing:.1em}
+.ntx{font-size:10.5px}
+.dim{opacity:.16}
+.sel rect{stroke-width:3!important}
+.up rect.body{stroke:var(--up);stroke-width:2.4}
+.down rect.body{stroke:var(--down);stroke-width:2.4}
+.foe rect.body{stroke:var(--flag);stroke-width:2.6}
+.edge{fill:none;transition:opacity .2s}
+</style>
+
+<header>
+  <h1>議論グラフ</h1><span class="sub">ラグビー部 出店会議 / 最小形式</span>
+  <span class="spacer"></span>
+  <select class="f" id="filter"></select>
+  <button class="btn" id="fit">全体表示</button>
+  <button class="btn" id="clear">選択解除</button>
+</header>
+
+<main>
+  <div id="stage">
+    <svg id="svg"><g id="cam"><g id="gE"></g><g id="gN"></g></g></svg>
+    <div id="hint">ノードをクリックすると右に詳細、緑＝支えの連鎖、橙＝影響先、赤＝反論相手</div>
+    <div id="legend">
+      <div><span class="sw" style="background:#fff;border-color:#5b6b78"></span>主張</div>
+      <div><span class="sw" style="background:#f2e6c8;border-color:#9c7826"></span>出所（経験則・伝聞・直感）</div>
+      <div><span class="sw" style="background:#ece7f3;border-color:#6b3fa0"></span>出所（方針）</div>
+      <div><span class="sw" style="background:#f8e8e5;border-color:#a32b1e"></span>出所（未調査・未確定）</div>
+      <div>○印＝未調査／未確定に依存している主張</div>
+    </div>
+  </div>
+  <aside id="side"></aside>
+</main>
+
+<footer id="foot"></footer>
+
+<script>
+"use strict";
+/* ============================================================
+   最小スキーマ
+     node : {id, text, say}          say = 発言番号
+     edge : {from:[id,...], to, kind:"support"|"rebut"}
+   出所は固定語彙のノードとして持つ。フィールドは増やさない。
+   ============================================================ */
+const SRC={
+ "記録":"一次資料・実行委規約・その場で確認した事実",
+ "伝聞":"人づてに聞いた話。一次資料ではない",
+ "経験則":"一般化されているが、この場では検証されていない",
+ "直感":"根拠が提示されていない",
+ "方針":"この場の価値判断。事実ではない",
+ "未調査":"調べれば分かるが、まだ調べていない",
+ "未確定":"まだ起きていないので、現時点では分からない"
+};
+const SEC={p:"進行",y:"去年の失敗",l:"立地",t:"体験企画",k:"タックル案",c:"キック案",
+ m:"課金設計",j:"条件とルール",s:"ステーキ丼",g:"唐揚げ",b:"豚バラ串",d:"ドリンク",
+ h:"人員",i:"仕入れ",z:"役割・屋号"};
+
+/* ---- データ本体：ノードとエッジは完全に別配列。互いを参照するのはIDのみ ---- */
+/*  node : {id, text, say}            主張の中身だけ。関係の情報は一切持たない       */
+/*  edge : {id, kind, from[], to, note?}  関係だけ。from は連言（揃って支える）      */
+
+const N=[
+ {id:"記録", src:true, text:"記録"},
+ {id:"伝聞", src:true, text:"伝聞"},
+ {id:"経験則", src:true, text:"経験則"},
+ {id:"直感", src:true, text:"直感"},
+ {id:"方針", src:true, text:"方針"},
+ {id:"未調査", src:true, text:"未調査"},
+ {id:"未確定", src:true, text:"未確定"},
+ {id:"p1", say:"1", text:"ラグビー部は、今日出店内容を決めないと大学への出店申請の期限に間に合わない"},
+ {id:"p2", say:"10", text:"ラグビー部は、メニュー案を出し合う前に、去年の出店の反省から議論を始めるべきである"},
+ {id:"p3", say:"43", text:"ラグビー部は、商品の候補を挙げる前に、模擬店で売れる商品の条件を先に整理すべきである"},
+ {id:"y1", say:"13", text:"ラグビー部は、去年の文化祭で焼きそばを出店し、2日間で32,000円の赤字を出した"},
+ {id:"y2", say:"13", text:"ラグビー部は去年、初日の朝に1,500食分の麺と具材を一括発注したが、2日間で売れたのは820食だった"},
+ {id:"y3", say:"13", text:"ラグビー部は、去年売れ残った約680食分の食材をすべて廃棄した"},
+ {id:"y4", say:"15", text:"一昨年の出店を担当した先輩は、一昨年は1,200食売れたと岡田に話した"},
+ {id:"y5", say:"15", text:"ラグビー部の出店区画は、一昨年は正門のすぐ横、去年は第2体育館の裏だった"},
+ {id:"y6", say:"15", text:"正門横の区画は、体育館裏の区画よりも来場者の人通りが多い"},
+ {id:"y7", say:"15", text:"ラグビー部の出店区画の人通りは、一昨年と去年とで大きく違った"},
+ {id:"y8", say:"15", text:"立地条件が異なる年の販売実績は、そのまま今年の需要見込みには使えない"},
+ {id:"y9", say:"15", text:"ラグビー部が去年過剰に仕入れた原因は、立地条件の異なる一昨年の実績を需要見込みに使ったことである"},
+ {id:"y10", say:"13", text:"ラグビー部が去年赤字を出した原因は、需要の見込みに基づいて食材を過剰に仕入れたことである"},
+ {id:"y11", say:"16", text:"模擬店の飲食売上は、その出店区画の立地によってほぼ決まる"},
+ {id:"l1", say:"18", text:"ラグビー部の今年の出店区画は、来週行われる実行委員会の抽選で決まる"},
+ {id:"l2", say:"18", text:"実行委員会は、去年ハズレ区画だった団体を優先枠に入れる可能性があるが、確約はしていない"},
+ {id:"l3", say:"18", text:"ラグビー部は、今年の抽選で人通りの多い区画を引き当てる"},
+ {id:"l4", say:"18", text:"結果を大きく左右する条件が確定していないときは、その条件に依存しない案を選ぶべきである"},
+ {id:"l5", say:"19", text:"ラグビー部は、どの区画に当たっても成立する出店案を選ぶべきである"},
+ {id:"l6", say:"20", text:"ラグビー部は、立地が悪くても客を呼べる仕掛けを出店に組み込むべきである"},
+ {id:"t1", say:"25", text:"同じ商品を売る模擬店どうしは、価格と立地でしか差がつかない"},
+ {id:"t2", say:"25", text:"ラグビー部が飲食だけで勝負すると、周辺の模擬店と完全に同じ土俵に乗ることになる"},
+ {id:"t3", say:"25", text:"体験企画は、周辺の模擬店にはない差別化要因をラグビー部にもたらす"},
+ {id:"t4", say:"25", text:"特定の目的を持って来店した客は、その場でついでに他の商品も買う"},
+ {id:"t5", say:"25", text:"ラグビー部が体験企画を置けば、それ目当てに来た客が食べ物も買う導線ができる"},
+ {id:"k1", say:"22", text:"ラグビー部は、タックルマシンで来場者のヒットの強さを測定する体験企画を出店に併設する"},
+ {id:"k2", say:"28", text:"実行委員会は、接触や転倒の可能性がある企画に対して、審査で保険加入と安全管理の書類を要求する"},
+ {id:"k3", say:"28", text:"提出書類の要件が重い企画は、実質的に審査を通らないと考えたほうがよい"},
+ {id:"k4", say:"28", text:"来場者が人に体をぶつける形式の企画は、実行委員会の審査を通らない"},
+ {id:"k5", say:"29", text:"ラグビー部は、来場者がタックルバッグにぶつかるだけの形式にすれば体験企画を実施できる"},
+ {id:"k6", say:"30", text:"来場者が勢いをつけてタックルバッグに突っ込む形式も、実行委員会の審査に引っかかる可能性が高い"},
+ {id:"k7", say:"30", text:"ラグビー部が、マット設置・係員2名配置・対象を中学生以上に限定といった条件をすべて申請書に書けば、タックル体験は審査を通る可能性がある"},
+ {id:"k8", say:"30", text:"ラグビー部は、安全条件を付けた上でタックル体験企画を実施すべきである"},
+ {id:"k9", say:"31", text:"ラグビー部の当日の人員は有限であり、ある持ち場に人を割けば別の持ち場が薄くなる"},
+ {id:"k10", say:"31", text:"ラグビー部がタックル体験の安全管理に2名を割くと、その分キッチンの人員が薄くなる"},
+ {id:"k11", say:"32", text:"ラグビー部は、タックル体験企画を採用しない"},
+ {id:"c1", say:"32", text:"ラグビー部は、人にぶつからない形式で、ラグビー部らしさが出る体験企画を探すべきである"},
+ {id:"c2", say:"33", text:"キックの的当て企画は、来場者どうしの接触がなく、地面が芝生でなくても実施できる"},
+ {id:"c3", say:"35", text:"タックル体験企画には、男子学生しか参加しない"},
+ {id:"c4", say:"35", text:"キックの的当て企画は、タックル体験企画よりも参加する客層が広い"},
+ {id:"c5", say:"33", text:"ラグビー部は、ネットを張って的を吊るし、キックの的当て企画を出店に併設する"},
+ {id:"m1", say:"37", text:"ラグビー部は、キック的当てを有料制にして、企画単体で収益を出す"},
+ {id:"m2", say:"37", text:"ラグビー部は、キック的当てを誰でも無料にして、完全に集客専用の企画として使う"},
+ {id:"m3", say:"37", text:"ラグビー部は、キック的当てへの参加を、商品を購入した客だけの無料特典にする"},
+ {id:"m4", say:"38", text:"模擬店で現金のやり取りが増えると、会計が混乱し、行列の回転も落ちる"},
+ {id:"m5", say:"38", text:"キック的当てを購入者特典にすると、参加したい子どもが親に串を買わせる構造が生まれる"},
+ {id:"m6", say:"39", text:"キック的当ての景品を「串もう1本サービス」にすれば、ラグビー部の負担は原価だけで済む"},
+ {id:"m7", say:"40", text:"ラグビー部は、集客の仕掛けとしてキック的当てを購入者特典の形で実施する"},
+ {id:"j1", say:"44", text:"仕込みが単純で誰にでも作れる商品は、模擬店に向いている"},
+ {id:"j2", say:"44", text:"1個あたりの調理時間が短い商品は、模擬店に向いている"},
+ {id:"j3", say:"44", text:"片手で歩きながら食べられる商品は、模擬店に向いている"},
+ {id:"j4", say:"44", text:"調理中の匂いで客を引ける商品は、模擬店に向いている"},
+ {id:"j5", say:"45", text:"大学は、模擬店の調理を当日のみに限り、前日に仕込んだ食材の持ち込みを禁止している"},
+ {id:"j6", say:"45", text:"大学は、模擬店での生ものと自家製ソース類の提供を禁止している"},
+ {id:"j7", say:"45", text:"大学は、模擬店の火気使用を指定区画のみに限り、消火器の設置を義務づけている"},
+ {id:"j8", say:"45", text:"大学は、模擬店に保健所への届出と食品衛生責任者1名の設置を義務づけている"},
+ {id:"j9", say:"47", text:"小林が1日の講習を受けて、ラグビー部の食品衛生責任者になる"},
+ {id:"s1", say:"2", text:"ラグビー部は、模擬店でステーキ丼を販売する"},
+ {id:"s2", say:"5", text:"ステーキ丼で客を満足させるには肉が1食150g必要で、安い部位でもグラム150円として肉だけで原価225円になる"},
+ {id:"s3", say:"5", text:"ステーキ丼の原価は、米・タレ・容器の50円を含めて1食300円弱になる"},
+ {id:"s4", say:"7", text:"周囲が400円の焼きそばやクレープを売る中で、800円のステーキ丼は売れない"},
+ {id:"s5", say:"9", text:"ステーキ丼を600円で売ると原価率50%、1食あたりの利益は300円で、500食売っても利益は15万円にとどまる"},
+ {id:"s6", say:"9", text:"ステーキ丼は肉を焼くのに時間がかかるため、そもそも2日間で500食をさばけない"},
+ {id:"s7", say:"9", text:"ラグビー部は、ステーキ丼案を採用しない"},
+ {id:"g1", say:"49", text:"ラグビー部は、模擬店で唐揚げを販売する"},
+ {id:"g2", say:"50", text:"唐揚げの販売は、揚げ油の廃棄処理が面倒である"},
+ {id:"g3", say:"50", text:"唐揚げは一度に揚げられる量が限られるため、行列をさばききれない"},
+ {id:"g4", say:"50", text:"唐揚げは下味の仕込みを前日にできないため、当日の朝の作業が過大になる"},
+ {id:"g5", say:"50", text:"ラグビー部は、唐揚げ案を採用しない"},
+ {id:"b1", say:"51", text:"豚バラ串は、焼き台に並べて焼くだけで調理が完了する"},
+ {id:"b2", say:"51", text:"豚バラ串は串に刺さっているため、客が片手で歩きながら食べられる"},
+ {id:"b3", say:"51", text:"豚バラ串は、焼いているときの匂いが非常に強い"},
+ {id:"b4", say:"51", text:"豚バラ串は、模擬店に向く商品条件をすべて満たしている"},
+ {id:"b5", say:"52", text:"豚バラ串を焼いている光景は、ラグビー部の出店らしさが出る"},
+ {id:"b6", say:"53", text:"ラグビー部が豚バラブロックを仕入れて自分たちで切れば、1本50gあたりの肉の原価は40円になる"},
+ {id:"b7", say:"53", text:"豚バラ串は、串・タレ・炭の10円を含めて1本あたり原価50円となり、250円で売れば原価率20%になる"},
+ {id:"b8", say:"54", text:"原価率20%は、模擬店の商品として非常に優秀な数字である"},
+ {id:"b9", say:"55", text:"ラグビー部は、当日に自分たちで肉を切って豚バラ串を提供できる"},
+ {id:"b10", say:"55", text:"ラグビー部が当日に肉を切る作業には、相当な時間がかかる"},
+ {id:"b11", say:"56", text:"ラグビー部が精肉店に串打ち済みで発注すれば、当日の肉を切る作業時間の問題は解決する"},
+ {id:"b12", say:"56", text:"串打ち済みでの発注は、単価が上がる代わりに衛生面でも安全である"},
+ {id:"b13", say:"57", text:"3学年上の高橋さんの実家は精肉店である"},
+ {id:"b14", say:"58", text:"ラグビー部は、OB会経由で高橋さんの実家の精肉店に串打ち済みの豚バラ串を発注できる"},
+ {id:"b15", say:"58", text:"仕入れ先の信頼性が上がることには、原価が下がらなくても価値がある"},
+ {id:"b16", say:"53", text:"ラグビー部は、豚バラ串を1本250円で主力商品として販売する"},
+ {id:"d1", say:"59", text:"ペットボトル飲料の原価率は、食べ物の原価率より圧倒的に低い"},
+ {id:"d2", say:"59", text:"ペットボトルを箱で仕入れて氷で冷やして売るだけで、利益率3〜4割が取れる"},
+ {id:"d3", say:"59", text:"ラグビー部は、豚バラ串と併せてペットボトル飲料を販売する"},
+ {id:"d4", say:"61", text:"セット販売は、模擬店の会計を単純にし、客単価も上げる"},
+ {id:"d5", say:"61", text:"価格の端数をなくして100円玉と500円玉だけで会計が済むようにすると、お釣りのミスが激減する"},
+ {id:"d6", say:"60", text:"ラグビー部は、豚バラ串2本とドリンク1本を600円のセットとして販売する"},
+ {id:"h1", say:"63", text:"ラグビー部の部員は32人、マネージャーは3人である"},
+ {id:"h2", say:"63", text:"ラグビー部は文化祭の翌週にリーグ戦を控えているため、練習を完全には休めない"},
+ {id:"h3", say:"64", text:"田村が監督と調整して、文化祭の2日間を午前練習・午後出店の形にできる"},
+ {id:"h4", say:"65", text:"ラグビー部は、1シフト8人（焼き2・串出し1・会計2・呼び込み1・キック係2）の3交代でシフトを組む"},
+ {id:"h5", say:"65", text:"休憩と補充要員を含めると、ラグビー部は常時10人を出店に配置する必要がある"},
+ {id:"h6", say:"65", text:"部員32人であれば、3交代・常時10人のシフトは成立する"},
+ {id:"h7", say:"66", text:"1年生は全員、出店のシフトに入ってよいと考えている"},
+ {id:"h8", say:"68", text:"毎日の声出しと体格により、呼び込みはラグビー部の強みになる"},
+ {id:"h9", say:"69", text:"呼び込みの圧が強すぎると、子どもの客が逃げる"},
+ {id:"h10", say:"70", text:"ラグビー部の呼び込み担当は、ジャージを着て笑顔で声を出す"},
+ {id:"i1", say:"71", text:"ラグビー部は、今年の仕入れで去年と同じ過剰発注を繰り返してはならない"},
+ {id:"i2", say:"73", text:"模擬店にとって、商品の売り切れは赤字よりずっとマシである"},
+ {id:"i3", say:"73", text:"初日に売り切れたという評判は、2日目の集客につながる"},
+ {id:"i4", say:"72", text:"ラグビー部は、初日分として豚バラ串700本だけを仕入れ、売れ行きを見て午後に追加発注する"},
+ {id:"i5", say:"72", text:"ラグビー部は、徒歩10分のスーパーへ追加仕入れに走る自転車班2名を常時待機させる"},
+ {id:"i6", say:"75", text:"ラグビー部は、控えめに見て2日間で串1,000本・ドリンク400本、売上約33万円を見込む"},
+ {id:"i7", say:"75", text:"ラグビー部の出店は、原価7万円弱と出店料・備品6万円を差し引いて、約20万円の黒字になる"},
+ {id:"i8", say:"75", text:"売上目標の数字は達成目標であって仕入れ量の根拠にはせず、ラグビー部は仕入れを常に実売の後追いで行う"},
+ {id:"z1", say:"76", text:"ラグビー部は、統括を田村、会計と仕入れを岡田、キッチン設計と当日運営を若林、申請と衛生を小林、集客とキック企画を佐々木、1年生のシフト管理を中村が担当する"},
+ {id:"z2", say:"78", text:"ラグビー部は、出店の屋号を「タックル亭」にする"},
+ {id:"z3", say:"79", text:"タックル企画を実施しないのに屋号を「タックル亭」にするのは、実態と合っていない"},
+ {id:"z4", say:"80", text:"ラグビー部は、出店の屋号を「キック亭」にする"},
+ {id:"z5", say:"81", text:"「キック亭」という屋号は、客への訴求力が弱い"},
+ {id:"z6", say:"82", text:"ラグビー部は、屋号の決定を次回の会議に持ち越す"},
+];
+
+const E=[
+ {id:"e1", kind:"support", from:["記録"], to:"p1"},
+ {id:"e2", kind:"support", from:["方針"], to:"p2"},
+ {id:"e3", kind:"support", from:["方針"], to:"p3"},
+ {id:"e4", kind:"support", from:["記録"], to:"y1"},
+ {id:"e5", kind:"support", from:["記録"], to:"y2"},
+ {id:"e6", kind:"support", from:["記録"], to:"y3"},
+ {id:"e7", kind:"support", from:["伝聞"], to:"y4"},
+ {id:"e8", kind:"support", from:["記録"], to:"y5"},
+ {id:"e9", kind:"support", from:["経験則"], to:"y6"},
+ {id:"e10", kind:"support", from:["y5","y6"], to:"y7"},
+ {id:"e11", kind:"support", from:["経験則"], to:"y8"},
+ {id:"e12", kind:"support", from:["y4","y7","y8"], to:"y9"},
+ {id:"e13", kind:"support", from:["y1","y2","y3","y9"], to:"y10"},
+ {id:"e14", kind:"support", from:["経験則"], to:"y11"},
+ {id:"e15", kind:"support", from:["記録"], to:"l1"},
+ {id:"e16", kind:"support", from:["記録"], to:"l2"},
+ {id:"e17", kind:"support", from:["未確定"], to:"l3"},
+ {id:"e18", kind:"support", from:["方針"], to:"l4"},
+ {id:"e19", kind:"support", from:["y11","l1","l2","l3","l4"], to:"l5"},
+ {id:"e20", kind:"support", from:["l5"], to:"l6"},
+ {id:"e21", kind:"support", from:["経験則"], to:"t1"},
+ {id:"e22", kind:"support", from:["t1"], to:"t2"},
+ {id:"e23", kind:"support", from:["t2"], to:"t3"},
+ {id:"e24", kind:"support", from:["経験則"], to:"t4"},
+ {id:"e25", kind:"support", from:["t3","t4"], to:"t5"},
+ {id:"e26", kind:"support", from:["直感","l6","t5"], to:"k1"},
+ {id:"e27", kind:"support", from:["記録"], to:"k2"},
+ {id:"e28", kind:"support", from:["経験則"], to:"k3"},
+ {id:"e29", kind:"support", from:["k2","k3"], to:"k4"},
+ {id:"e30", kind:"support", from:["直感"], to:"k5"},
+ {id:"e31", kind:"support", from:["k2","k3"], to:"k6"},
+ {id:"e32", kind:"support", from:["k2"], to:"k7"},
+ {id:"e33", kind:"support", from:["k7"], to:"k8"},
+ {id:"e34", kind:"support", from:["経験則"], to:"k9"},
+ {id:"e35", kind:"support", from:["k7","k9"], to:"k10"},
+ {id:"e36", kind:"support", from:["k4","k6","k10"], to:"k11"},
+ {id:"e37", kind:"rebut", from:["k4"], to:"k1", note:"来場者が人にぶつかる企画は審査を通らないため、タックルマシン案は成立しない"},
+ {id:"e38", kind:"rebut", from:["k6"], to:"k5", note:"バッグ相手でも勢いをつける形式なら、同じく審査に引っかかる"},
+ {id:"e39", kind:"rebut", from:["k10"], to:"k8", note:"安全条件を満たすほど人手を食い、キッチンが薄くなる"},
+ {id:"e40", kind:"support", from:["k11","l6"], to:"c1"},
+ {id:"e41", kind:"support", from:["経験則"], to:"c2"},
+ {id:"e42", kind:"support", from:["経験則"], to:"c3"},
+ {id:"e43", kind:"support", from:["経験則","c3"], to:"c4"},
+ {id:"e44", kind:"support", from:["c1","c2","c4"], to:"c5"},
+ {id:"e45", kind:"support", from:["直感"], to:"m1"},
+ {id:"e46", kind:"support", from:["直感"], to:"m2"},
+ {id:"e47", kind:"support", from:["直感"], to:"m3"},
+ {id:"e48", kind:"support", from:["経験則"], to:"m4"},
+ {id:"e49", kind:"support", from:["経験則"], to:"m5"},
+ {id:"e50", kind:"support", from:["経験則"], to:"m6"},
+ {id:"e51", kind:"support", from:["c5","m3","m5","m6"], to:"m7"},
+ {id:"e52", kind:"rebut", from:["m4"], to:"m1", note:"有料化は会計を混乱させ、行列の回転を落とす"},
+ {id:"e53", kind:"support", from:["経験則"], to:"j1"},
+ {id:"e54", kind:"support", from:["経験則"], to:"j2"},
+ {id:"e55", kind:"support", from:["経験則"], to:"j3"},
+ {id:"e56", kind:"support", from:["経験則"], to:"j4"},
+ {id:"e57", kind:"support", from:["記録"], to:"j5"},
+ {id:"e58", kind:"support", from:["記録"], to:"j6"},
+ {id:"e59", kind:"support", from:["記録"], to:"j7"},
+ {id:"e60", kind:"support", from:["記録"], to:"j8"},
+ {id:"e61", kind:"support", from:["j8","記録"], to:"j9"},
+ {id:"e62", kind:"support", from:["直感"], to:"s1"},
+ {id:"e63", kind:"support", from:["経験則"], to:"s2"},
+ {id:"e64", kind:"support", from:["s2","経験則"], to:"s3"},
+ {id:"e65", kind:"support", from:["経験則"], to:"s4"},
+ {id:"e66", kind:"support", from:["s3"], to:"s5"},
+ {id:"e67", kind:"support", from:["経験則","j2"], to:"s6"},
+ {id:"e68", kind:"support", from:["s4","s5","s6"], to:"s7"},
+ {id:"e69", kind:"rebut", from:["s7"], to:"s1", note:"価格が客に通らず、原価率も回転も悪い"},
+ {id:"e70", kind:"support", from:["直感"], to:"g1"},
+ {id:"e71", kind:"support", from:["経験則"], to:"g2"},
+ {id:"e72", kind:"support", from:["経験則","j2"], to:"g3"},
+ {id:"e73", kind:"support", from:["j5","経験則"], to:"g4"},
+ {id:"e74", kind:"support", from:["g2","g3","g4"], to:"g5"},
+ {id:"e75", kind:"rebut", from:["g5"], to:"g1", note:"油の処理と行列の滞り、当日仕込みの負荷"},
+ {id:"e76", kind:"support", from:["経験則"], to:"b1"},
+ {id:"e77", kind:"support", from:["経験則"], to:"b2"},
+ {id:"e78", kind:"support", from:["経験則"], to:"b3"},
+ {id:"e79", kind:"support", from:["j1","j2","j3","j4","b1","b2","b3"], to:"b4"},
+ {id:"e80", kind:"support", from:["直感"], to:"b5"},
+ {id:"e81", kind:"support", from:["経験則"], to:"b6"},
+ {id:"e82", kind:"support", from:["b6"], to:"b7"},
+ {id:"e83", kind:"support", from:["b7","経験則"], to:"b8"},
+ {id:"e84", kind:"support", from:["j5"], to:"b9"},
+ {id:"e85", kind:"support", from:["経験則"], to:"b10"},
+ {id:"e86", kind:"support", from:["b10"], to:"b11"},
+ {id:"e87", kind:"support", from:["経験則"], to:"b12"},
+ {id:"e88", kind:"support", from:["記録"], to:"b13"},
+ {id:"e89", kind:"support", from:["b13","未調査"], to:"b14"},
+ {id:"e90", kind:"support", from:["方針"], to:"b15"},
+ {id:"e91", kind:"support", from:["b4","b5","b8","b11","b14","b15"], to:"b16"},
+ {id:"e92", kind:"rebut", from:["b10"], to:"b9", note:"当日に手で切る作業は時間的に成立しない"},
+ {id:"e93", kind:"support", from:["経験則"], to:"d1"},
+ {id:"e94", kind:"support", from:["d1","経験則"], to:"d2"},
+ {id:"e95", kind:"support", from:["d2"], to:"d3"},
+ {id:"e96", kind:"support", from:["経験則"], to:"d4"},
+ {id:"e97", kind:"support", from:["経験則"], to:"d5"},
+ {id:"e98", kind:"support", from:["b16","d3","d4","d5"], to:"d6"},
+ {id:"e99", kind:"support", from:["記録"], to:"h1"},
+ {id:"e100", kind:"support", from:["記録"], to:"h2"},
+ {id:"e101", kind:"support", from:["h2","未調査"], to:"h3"},
+ {id:"e102", kind:"support", from:["経験則","m7"], to:"h4"},
+ {id:"e103", kind:"support", from:["h4","k9"], to:"h5"},
+ {id:"e104", kind:"support", from:["h1","h5","h3"], to:"h6"},
+ {id:"e105", kind:"support", from:["記録"], to:"h7"},
+ {id:"e106", kind:"support", from:["経験則"], to:"h8"},
+ {id:"e107", kind:"support", from:["経験則"], to:"h9"},
+ {id:"e108", kind:"support", from:["h8","h9"], to:"h10"},
+ {id:"e109", kind:"support", from:["y10"], to:"i1"},
+ {id:"e110", kind:"support", from:["方針"], to:"i2"},
+ {id:"e111", kind:"support", from:["経験則"], to:"i3"},
+ {id:"e112", kind:"support", from:["i1","i2","i3"], to:"i4"},
+ {id:"e113", kind:"support", from:["i4"], to:"i5"},
+ {id:"e114", kind:"support", from:["経験則"], to:"i6"},
+ {id:"e115", kind:"support", from:["i6","b7"], to:"i7"},
+ {id:"e116", kind:"support", from:["i1","i7","方針"], to:"i8"},
+ {id:"e117", kind:"support", from:["b16","d6","h6","i4","m7","j9"], to:"z1"},
+ {id:"e118", kind:"support", from:["直感"], to:"z2"},
+ {id:"e119", kind:"support", from:["k11"], to:"z3"},
+ {id:"e120", kind:"support", from:["直感"], to:"z4"},
+ {id:"e121", kind:"support", from:["直感"], to:"z5"},
+ {id:"e122", kind:"support", from:["z3","z5"], to:"z6"},
+ {id:"e123", kind:"rebut", from:["z3"], to:"z2", note:"名前と出店の実態が合っていない"},
+ {id:"e124", kind:"rebut", from:["z5"], to:"z4", note:"客への訴求力がない"},
+];
+
+/* ============================================================
+   索引と派生計算
+   ============================================================ */
+const M=Object.fromEntries(N.map(x=>[x.id,x]));
+const SUP={},OUT={},REBin={},REBout={};
+N.forEach(x=>{SUP[x.id]=[];OUT[x.id]=[];REBin[x.id]=[];REBout[x.id]=[];});
+E.forEach(e=>{
+  if(e.kind==="support"){SUP[e.to].push(e.from);e.from.forEach(f=>OUT[f].push(e.to));}
+  else{REBout[e.from[0]].push(e);REBin[e.to].push(e);}
+});
+const secOf=id=>M[id].src?"出所":SEC[id.replace(/\d+$/,"")]||"—";
+function down(s){const o=new Set(),st=[...OUT[s]];while(st.length){const x=st.pop();if(o.has(x))continue;o.add(x);OUT[x].forEach(y=>st.push(y));}return o;}
+function up(s){const o=new Set(),st=SUP[s].flat().slice();while(st.length){const x=st.pop();if(o.has(x))continue;o.add(x);(SUP[x]||[]).flat().forEach(y=>st.push(y));}return o;}
+function collapse(seed){const dead=new Set([seed]);let ch=true;
+  while(ch){ch=false;for(const x of N){if(x.src||dead.has(x.id))continue;const gs=SUP[x.id];if(!gs.length)continue;
+    if(gs.every(g=>g.some(p=>dead.has(p)))){dead.add(x.id);ch=true;}}}
+  dead.delete(seed);return dead;}
+const BLOCK={};N.forEach(x=>BLOCK[x.id]=[]);
+["未調査","未確定"].forEach(s=>down(s).forEach(x=>BLOCK[x].push(s)));
+
+/* ============================================================
+   レイアウト（層別DAG＋重心法）
+   ============================================================ */
+const NW=170,GAPX=74,GAPY=13,PAD=44;
+function wrap(s,u){const L=[];let c="",w=0;
+  for(const ch of s){const cw=/[\x00-\xff]/.test(ch)?.55:1;
+    if(w+cw>u&&!"、。）」・".includes(ch)){L.push(c);c=ch;w=cw;}else{c+=ch;w+=cw;}}
+  if(c)L.push(c);return L.length>3?[...L.slice(0,2),L[2].slice(0,11)+"…"]:L;}
+let POS={},W=0,H=0;
+function layout(){
+  const dep={},seen={};
+  const d=id=>{if(dep[id]!=null)return dep[id];if(seen[id])return 0;seen[id]=1;
+    const ps=SUP[id].flat().filter(p=>M[p]);return dep[id]=ps.length?1+Math.max(...ps.map(d)):0;};
+  N.forEach(x=>d(x.id));
+  const box={};N.forEach(x=>{const l=x.src?[x.text]:wrap(x.text,15);
+    box[x.id]={l,h:x.src?26:16+l.length*13+6};});
+  const cols=[];N.forEach(x=>(cols[dep[x.id]] ||= []).push(x.id));
+  cols.forEach(c=>c&&c.sort());
+  for(let it=0;it<18;it++){
+    const y={};cols.forEach(c=>{if(!c)return;let t=PAD;c.forEach(id=>{y[id]=t+box[id].h/2;t+=box[id].h+GAPY;});});
+    for(let k=1;k<cols.length;k++){if(!cols[k])continue;
+      cols[k].sort((a,b)=>{const bc=id=>{const p=SUP[id].flat().filter(x=>y[x]!=null);
+        return p.length?p.reduce((s,x)=>s+y[x],0)/p.length:y[id];};return bc(a)-bc(b);});}
+  }
+  POS={};cols.forEach((c,k)=>{if(!c)return;let t=PAD;
+    c.forEach(id=>{POS[id]={x:PAD+k*(NW+GAPX),y:t,w:NW,h:box[id].h,l:box[id].l,d:k};t+=box[id].h+GAPY;});});
+  W=PAD*2+cols.length*(NW+GAPX)-GAPX;
+  H=PAD*2+Math.max(...cols.filter(Boolean).map(c=>c.reduce((s,id)=>s+box[id].h+GAPY,0)));
+}
+
+/* ============================================================
+   描画
+   ============================================================ */
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a={})=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const svg=document.getElementById("svg"),cam=document.getElementById("cam");
+const gE=document.getElementById("gE"),gN=document.getElementById("gN");
+let sel=null,view={x:0,y:0,k:1},filter="";
+
+function style(x){
+  if(!x.src)return{f:"#ffffff",s:"#5b6b78"};
+  if(x.id==="方針")return{f:"#ece7f3",s:"var(--policy)"};
+  if(x.id==="未調査"||x.id==="未確定")return{f:"var(--flagBg)",s:"var(--flag)"};
+  if(x.id==="記録")return{f:"#e7edf1",s:"#4d6275"};
+  return{f:"#f2e6c8",s:"#9c7826"};
+}
+function render(){
+  layout();gE.textContent="";gN.textContent="";
+  if(!svg.querySelector("defs")){const d=el("defs");
+    [["ah","#9aa4ab"],["ahr","var(--flag)"]].forEach(([id,c])=>{
+      const m=el("marker",{id,viewBox:"0 0 8 8",refX:7.5,refY:4,markerWidth:6.5,markerHeight:6.5,orient:"auto"});
+      m.appendChild(el("path",{d:"M0 0 L8 4 L0 8 z",fill:c}));d.appendChild(m);});
+    svg.insertBefore(d,cam);}
+
+  // support（複数fromは点で束ねる）
+  E.filter(e=>e.kind==="support").forEach((e,i)=>{
+    const b=POS[e.to];if(!b)return;const g=e.from.filter(p=>POS[p]);if(!g.length)return;
+    const jy=b.y+b.h/2,jx=b.x-26;
+    if(g.length===1){const a=POS[g[0]],x1=a.x+a.w,y1=a.y+a.h/2,mx=(x1+b.x)/2;
+      gE.appendChild(el("path",{class:"edge",d:`M${x1} ${y1} C${mx} ${y1} ${mx} ${jy} ${b.x} ${jy}`,
+        stroke:"#9aa4ab","stroke-width":1.1,"marker-end":"url(#ah)","data-e":`s:${g[0]}>${e.to}`}));
+    }else{
+      g.forEach(p=>{const a=POS[p],x1=a.x+a.w,y1=a.y+a.h/2,mx=(x1+jx)/2;
+        gE.appendChild(el("path",{class:"edge",d:`M${x1} ${y1} C${mx} ${y1} ${mx} ${jy} ${jx} ${jy}`,
+          stroke:"#9aa4ab","stroke-width":.95,"data-e":`s:${p}>${e.to}`}));});
+      gE.appendChild(el("circle",{class:"edge",cx:jx,cy:jy,r:2.8,fill:"#9aa4ab","data-e":`j:${e.to}`}));
+      gE.appendChild(el("path",{class:"edge",d:`M${jx} ${jy} L${b.x} ${jy}`,stroke:"#9aa4ab","stroke-width":1.3,
+        "marker-end":"url(#ah)","data-e":`j:${e.to}`}));
+    }
+  });
+  // rebut（右辺から出て相手の上辺へ）
+  E.filter(e=>e.kind==="rebut").forEach((e,i)=>{
+    const a=POS[e.from[0]],b=POS[e.to];if(!a||!b)return;
+    const lo=Math.min(a.d,b.d),hi=Math.max(a.d,b.d);let top=Infinity;
+    N.forEach(x=>{const p=POS[x.id];if(p&&p.d>=lo&&p.d<=hi)top=Math.min(top,p.y);});
+    const arc=top-34-i*12,sx=a.x+a.w,sy=a.y+a.h/2,bx=b.x+b.w*.5;
+    gE.appendChild(el("path",{class:"edge",d:`M${sx} ${sy} C${sx+52} ${sy} ${bx} ${arc} ${bx} ${b.y}`,
+      stroke:"var(--flag)","stroke-width":1.4,"stroke-dasharray":"5 3","marker-end":"url(#ahr)","data-e":`r:${e.from[0]}>${e.to}`}));
+  });
+  // nodes
+  N.forEach(x=>{
+    const p=POS[x.id],st=style(x);
+    const g=el("g",{class:"node","data-id":x.id,transform:`translate(${p.x} ${p.y})`});
+    g.appendChild(el("rect",{class:"body",width:p.w,height:p.h,rx:x.src?13:2,fill:st.f,stroke:st.s,
+      "stroke-dasharray":x.src?"4 3":""}));
+    if(x.src){const t=el("text",{class:"nid",x:p.w/2,y:17,fill:st.s,"text-anchor":"middle","font-size":11.5});
+      t.textContent="《"+x.text+"》";g.appendChild(t);}
+    else{
+      const t=el("text",{class:"nid",x:8,y:13,fill:st.s});t.textContent=x.id;g.appendChild(t);
+      const s2=el("text",{class:"ntx",x:p.w-8,y:13,fill:"#9aa4ab","text-anchor":"end","font-size":9});
+      s2.textContent="#"+x.say;g.appendChild(s2);
+      p.l.forEach((L,i)=>{const q=el("text",{class:"ntx",x:8,y:27+i*13,fill:"var(--ink)"});q.textContent=L;g.appendChild(q);});
+      if(BLOCK[x.id].length)g.appendChild(el("circle",{cx:p.w-9,cy:p.h-9,r:3.6,fill:"none",stroke:"var(--flag)","stroke-width":1.6}));
+    }
+    gN.appendChild(g);
+  });
+  hi();
+}
+function hi(){
+  const U=sel?up(sel):null,D=sel?down(sel):null;
+  const foes=new Set();if(sel){REBin[sel].forEach(e=>foes.add(e.from[0]));REBout[sel].forEach(e=>foes.add(e.to));}
+  const rel=sel?new Set([sel,...U,...D,...foes]):null;
+  if(sel)foes.forEach(f=>up(f).forEach(z=>rel.add(z)));
+  gN.querySelectorAll(".node").forEach(g=>{const id=g.dataset.id;
+    const off=filter&&secOf(id)!==filter&&secOf(id)!=="出所";
+    g.classList.toggle("sel",id===sel);
+    g.classList.toggle("up",!!U&&U.has(id)&&!foes.has(id));
+    g.classList.toggle("down",!!D&&D.has(id)&&!foes.has(id));
+    g.classList.toggle("foe",!!sel&&foes.has(id));
+    g.classList.toggle("dim",sel?!rel.has(id):off);});
+  gE.querySelectorAll(".edge").forEach(p=>{
+    const d=p.dataset.e||"";let live=true;
+    if(sel){
+      if(d[0]==="j")live=rel.has(d.slice(2));
+      else{const[a,b]=d.slice(2).split(">");live=rel.has(a)&&rel.has(b);}
+    }else if(filter){
+      const ids=d[0]==="j"?[d.slice(2)]:d.slice(2).split(">");
+      live=ids.some(i=>secOf(i)===filter);
+    }
+    p.classList.toggle("dim",!live);});
+  document.getElementById("hint").style.opacity=sel?0:1;
+}
+function fit(){const r=svg.getBoundingClientRect();
+  const k=Math.min(r.width/(W+30),r.height/(H+60),1.1);
+  view={k,x:(r.width-W*k)/2,y:(r.height-H*k)/2+22*k};
+  cam.setAttribute("transform",`translate(${view.x} ${view.y}) scale(${view.k})`);}
+function focus(id){const p=POS[id];if(!p)return;const r=svg.getBoundingClientRect();
+  view.k=Math.max(view.k,.75);
+  view.x=r.width/2-(p.x+p.w/2)*view.k;view.y=r.height/2-(p.y+p.h/2)*view.k;
+  cam.setAttribute("transform",`translate(${view.x} ${view.y}) scale(${view.k})`);}
+{
+  const st=document.getElementById("stage");let dr=null;
+  st.addEventListener("pointerdown",e=>{if(e.target.closest(".node"))return;
+    dr={x:e.clientX-view.x,y:e.clientY-view.y};st.classList.add("drag");st.setPointerCapture(e.pointerId);});
+  st.addEventListener("pointermove",e=>{if(!dr)return;view.x=e.clientX-dr.x;view.y=e.clientY-dr.y;
+    cam.setAttribute("transform",`translate(${view.x} ${view.y}) scale(${view.k})`);});
+  st.addEventListener("pointerup",()=>{dr=null;st.classList.remove("drag");});
+  st.addEventListener("wheel",e=>{e.preventDefault();const r=svg.getBoundingClientRect();
+    const mx=e.clientX-r.left,my=e.clientY-r.top;
+    const k=Math.min(2.6,Math.max(.18,view.k*(e.deltaY<0?1.13:1/1.13)));
+    view.x=mx-(mx-view.x)*k/view.k;view.y=my-(my-view.y)*k/view.k;view.k=k;
+    cam.setAttribute("transform",`translate(${view.x} ${view.y}) scale(${view.k})`);},{passive:false});
+  gN.addEventListener("click",e=>{const g=e.target.closest(".node");if(!g)return;
+    pick(g.dataset.id===sel?null:g.dataset.id);});
+}
+function pick(id,move){sel=id;hi();side();if(id&&move)focus(id);}
+
+/* ============================================================
+   右パネル
+   ============================================================ */
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const chip=id=>`<span class="chip ${M[id].src?"src":""}" data-go="${id}">${M[id].src?"《"+id+"》":id}</span>`;
+function side(){
+  const a=document.getElementById("side");
+  if(!sel){a.innerHTML=`<h2>詳細</h2><p class="empty">ノードをクリックすると、その主張の全文・支え・影響範囲が出ます。<br><br>下の欄は、いま何が確定していないかと、そのせいで止まっている判断の一覧です。</p>`;return;}
+  const x=M[sel];
+  if(x.src){a.innerHTML=`<h2>出所ノード</h2><div class="sid">《${x.id}》</div>
+    <div class="txt">${SRC[x.id]}</div>
+    <div class="blk"><h2>これに支えられた主張（直接）</h2>${OUT[x.id].map(chip).join("")||'<span class="empty">なし</span>'}</div>
+    <div class="blk"><h2>間接を含めた影響範囲</h2><b>${down(x.id).size}</b> 件</div>`;
+    bindGo(a);return;}
+  const D=down(sel),U=up(sel),C=collapse(sel);
+  a.innerHTML=`<h2>${secOf(sel)}</h2>
+    <div><span class="sid">${sel}</span><span class="say">発言 #${x.say}</span></div>
+    <div class="txt">${esc(x.text)}</div>
+    <div class="blk"><h2>支え</h2>${
+      SUP[sel].length?SUP[sel].map(g=>`<div class="grp"><span class="lbl">${g.length>1?"この"+g.length+"つが揃って支える":"支え"}</span>${g.map(chip).join("")}</div>`).join(""):
+      '<span class="warn">支えなし</span>'}</div>
+    ${BLOCK[sel].length?`<div class="blk"><h2>確定していない依存</h2><div class="reb">${BLOCK[sel].map(b=>"《"+b+"》").join(" ")} に依存しているため、この主張はまだ確定できません。</div></div>`:""}
+    ${REBin[sel].length?`<div class="blk"><h2>受けている反論</h2>${REBin[sel].map(e=>`<div class="reb">${chip(e.from[0])}<br>${esc(e.note)}</div>`).join("")}</div>`:""}
+    ${REBout[sel].length?`<div class="blk"><h2>出している反論</h2>${REBout[sel].map(e=>`<div class="reb">→ ${chip(e.to)}<br>${esc(e.note)}</div>`).join("")}</div>`:""}
+    <div class="blk"><h2>これを支えているもの（直接）</h2>${SUP[sel].flat().map(chip).join("")||'<span class="empty">なし</span>'}</div>
+    <div class="blk"><h2>これが支えているもの（直接）</h2>${OUT[sel].map(chip).join("")||'<span class="empty">なし — この主張はどこにも使われていません</span>'}</div>
+    <div class="blk"><h2>影響範囲</h2>
+      書き換えると <b>${D.size}</b> 件が要再検討、うち <b style="color:var(--flag)">${C.size}</b> 件は支えを失って倒れます。
+      <div style="margin-top:6px">${[...D].map(i=>`<span class="chip" data-go="${i}" ${C.has(i)?'style="border-color:var(--flag);color:var(--flag)"':""}>${i}</span>`).join("")}</div></div>`;
+  bindGo(a);
+}
+function bindGo(root){root.querySelectorAll("[data-go]").forEach(e=>e.onclick=()=>pick(e.dataset.go,true));}
+
+/* ============================================================
+   下パネル：NextAction
+   ============================================================ */
+function foot(){
+  const f=document.getElementById("foot");
+  const kids=s=>OUT[s].filter(x=>!M[x].src);
+  const investigate=kids("未調査").map(id=>({id,extra:down(id).size}));
+  const waiting=kids("未確定").map(id=>({id,extra:down(id).size}));
+  const hunch=N.filter(x=>!x.src&&SUP[x.id].length&&SUP[x.id].every(g=>g.every(p=>p==="直感"))&&!REBin[x.id].length);
+  const unused=N.filter(x=>!x.src&&!OUT[x.id].length&&!REBout[x.id].length&&!REBin[x.id].length
+    &&SUP[x.id].length&&SUP[x.id].every(g=>g.every(p=>M[p].src&&p!=="直感")));
+  const col=(cls,title,desc,items)=>`<div class="col"><h3>${title}<span class="n ${cls}">${items.length}</span></h3>
+    <p>${desc}</p><ul>${items.length?items.map(i=>
+      `<li data-go="${i.id}"><b>${i.id}</b> ${esc(M[i.id].text.slice(0,52))}${M[i.id].text.length>52?"…":""}
+       ${i.note?`<span class="why">${i.note}</span>`:""}</li>`).join(""):'<li style="cursor:default;color:var(--ink3)">該当なし</li>'}</ul></div>`;
+  f.innerHTML=
+   col("a","調べる（未調査）","調べれば分かるのに、まだ確かめていない。ここが止まると下流も止まる。",
+     investigate.map(o=>({id:o.id,note:`確定するまで ${o.extra} 件の判断が確定しない`})))+
+   col("b","待つ・備える（未確定）","まだ起きていないので分からない。両方の枝に備える必要がある。",
+     waiting.map(o=>({id:o.id,note:`この結果に ${o.extra} 件がぶら下がっている`})))+
+   col("c","根拠が直感だけ","反論もされず、支えが《直感》しかないまま生き残っている主張。",
+     hunch.map(x=>({id:x.id,note:"支えを足すか、意識的に直感として採用する"})))+
+   col("","使われていない資料","出したきり、どの判断にもつながっていない。見落としの可能性がある。",
+     unused.map(x=>({id:x.id,note:"この事実を使うべき判断がないか確認する"})));
+  bindGo(f);
+}
+
+/* ============================================================ */
+{
+  const sel2=document.getElementById("filter");
+  sel2.innerHTML=`<option value="">すべての区画を表示</option>`+
+    [...new Set(N.filter(x=>!x.src).map(x=>secOf(x.id)))].map(s=>`<option value="${s}">${s}</option>`).join("");
+  sel2.onchange=()=>{filter=sel2.value;hi();};
+}
+document.getElementById("fit").onclick=fit;
+document.getElementById("clear").onclick=()=>pick(null);
+addEventListener("resize",()=>{if(!sel)fit();});
+render();fit();side();foot();
+</script>
